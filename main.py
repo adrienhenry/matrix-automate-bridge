@@ -2,7 +2,7 @@ import asyncio
 import os
 import io
 import mimetypes
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 # Added imports for handling encrypted files
 from nio import AsyncClient, AsyncClientConfig, MatrixRoom, RoomMessageText, RoomMessageImage
 from nio.crypto.attachments import decrypt_attachment
@@ -16,18 +16,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-load_dotenv()
+#load_dotenv()
 
 MATRIX_CONFIG = {
-    "homeserver": os.getenv("MATRIX_HOMESERVER", "https://matrix.org"),
-    "user_id": os.getenv("MATRIX_USER_ID"),
-    "access_token": os.getenv("MATRIX_ACCESS_TOKEN"),
-    "device_id": os.getenv("MATRIX_DEVICE_ID", "ACTIVEPIECES_BRIDGE"),
-    "store_path": os.getenv("MATRIX_STORE_PATH", "./store"),
-}
-
+    "homeserver": os.getenv("MATRIX_HOMESERVER", "https://matrix.org").strip(),
+    "user_id": os.getenv("MATRIX_USER_ID").strip(),
+    "access_token": os.getenv("MATRIX_ACCESS_TOKEN").strip(),
+    "device_id": os.getenv("MATRIX_DEVICE_ID", "ACTIVEPIECES_BRIDGE").strip(),
+    "store_path": os.getenv("MATRIX_STORE_PATH", "./store").strip(),
+}   
 ACTIVEPIECES_CONFIG = {
-    "webhook_url": os.getenv("ACTIVEPIECES_WEBHOOK_URL"),
+    "webhook_url": os.getenv("ACTIVEPIECES_WEBHOOK_URL").strip(),
 }
 
 if not ACTIVEPIECES_CONFIG["webhook_url"]:
