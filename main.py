@@ -2,7 +2,7 @@ import asyncio
 import os
 import io
 import mimetypes
-#from dotenv import load_dotenv
+from dotenv import load_dotenv
 # Added imports for handling encrypted files
 from nio import AsyncClient, AsyncClientConfig, MatrixRoom, RoomMessageText, RoomMessageImage
 from nio.crypto.attachments import decrypt_attachment
@@ -16,7 +16,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-#load_dotenv()
+load_dotenv()
 
 MATRIX_CONFIG = {
     "homeserver": os.getenv("MATRIX_HOMESERVER", "https://matrix.org").strip(),
@@ -29,6 +29,7 @@ ACTIVEPIECES_CONFIG = {
     "webhook_url": os.getenv("ACTIVEPIECES_WEBHOOK_URL").strip(),
 }
 
+cache_file = None
 if not ACTIVEPIECES_CONFIG["webhook_url"]:
     raise ValueError("Missing Activepieces webhook URL in .env file")
 
@@ -51,14 +52,16 @@ async def send_to_activepieces_file(metadata, filename, file_bytes, mime_type):
         
         # Add the file binary
         data.add_field('file', file_bytes, filename=filename, content_type=mime_type)
-
+        print("command: ",metadata["command"])
+        params = {"command": metadata["command"]}
         async with aiohttp.ClientSession() as session:
-            async with session.post(ACTIVEPIECES_CONFIG["webhook_url"], data=data) as response:
+            async with session.post(ACTIVEPIECES_CONFIG["webhook_url"], data=data,params=params) as response:
                 logger.info(f"✅ Image sent to Webhook. Status: {response.status}")
     except Exception as e:
         logger.error(f"❌ Error sending file: {e}")
 
 async def message_callback(room: MatrixRoom, event):
+    global cache_file
     if event.sender == MATRIX_CONFIG["user_id"]:
         return
 
@@ -76,10 +79,16 @@ async def message_callback(room: MatrixRoom, event):
         message_data["type"] = "text"
         message_data["body"] = event.body
         logger.info(f"📨 Text: {event.body}")
-        await send_to_activepieces_json(message_data)
+
+        if "!dictee" in message_data["body"] and message_data["room_name"]=="test":
+            if cache_file is not None:
+                cache_file["metadata"].update({"command":"dictee"})
+                await send_to_activepieces_file(**cache_file)
+            cache_file=None
 
     # --- HANDLE IMAGES ---
     elif isinstance(event, RoomMessageImage):
+        
         logger.info(f"📸 Processing image: {event.body}")
         message_data["type"] = "image"
         message_data["body"] = event.body # Filename
@@ -133,7 +142,7 @@ async def message_callback(room: MatrixRoom, event):
             mime_type = mimetypes.guess_type(event.body)[0] or "application/octet-stream"
 
             # 5. Send File to n8n
-            await send_to_activepieces_file(message_data, event.body, media_bytes, mime_type)
+            cache_file = {"metadata":message_data, "filename":event.body, "file_bytes":media_bytes, "mime_type":mime_type}
 
         except Exception as e:
             logger.error(f"❌ Error processing image: {e}")
