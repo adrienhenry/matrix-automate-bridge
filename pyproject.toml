@@ -9,4 +9,5 @@ dependencies = [
     "fastapi>=0.128.0",
     "python-dotenv>=1.2.1",
     "uvicorn>=0.40.0",
+    "matrix-nio[e2e]>=0.25.2",
 ]
