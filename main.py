@@ -24,7 +24,9 @@ MATRIX_CONFIG = {
     "access_token": os.getenv("MATRIX_ACCESS_TOKEN").strip(),
     "device_id": os.getenv("MATRIX_DEVICE_ID", "ACTIVEPIECES_BRIDGE").strip(),
     "store_path": os.getenv("MATRIX_STORE_PATH", "./store").strip(),
+    "bot_room": os.getenv("MATRIX_BOT_ROOM", "./store").strip(),
 }   
+print(MATRIX_CONFIG)
 ACTIVEPIECES_CONFIG = {
     "webhook_url": os.getenv("ACTIVEPIECES_WEBHOOK_URL").strip(),
 }
@@ -62,6 +64,7 @@ async def send_to_activepieces_file(metadata, filename, file_bytes, mime_type):
 
 async def message_callback(room: MatrixRoom, event):
     global cache_file
+
     if event.sender == MATRIX_CONFIG["user_id"]:
         return
 
@@ -73,14 +76,15 @@ async def message_callback(room: MatrixRoom, event):
         "timestamp": event.server_timestamp,
         "event_id": event.event_id,
     }
-
+    if message_data["room_name"]!=MATRIX_CONFIG["bot_room"]:
+        return
     # --- HANDLE TEXT ---
     if isinstance(event, RoomMessageText):
         message_data["type"] = "text"
         message_data["body"] = event.body
         logger.info(f"📨 Text: {event.body}")
 
-        if "!dictee" in message_data["body"] and message_data["room_name"]=="test":
+        if "!dictee" in message_data["body"]:
             if cache_file is not None:
                 cache_file["metadata"].update({"command":"dictee"})
                 await send_to_activepieces_file(**cache_file)
